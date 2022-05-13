@@ -10,19 +10,23 @@ class Cart extends Model
 {
     use HasFactory;
 
+    protected $fillable = ['payment_intent_id'];
+
     protected static function booted()
     {
-       static::creating(function ($model){
-           $model->uuid=(string) Str::uuid();
-       });
+        static::creating(function ($model) {
+            $model->uuid = (string)Str::uuid();
+        });
     }
 
-    public  function user(){
+    public function user()
+    {
         return $this->belongsTo(User::class);
     }
 
-    public function variations(){
-        return $this->belongsToMany(Variation::class,'cart_variation')
+    public function variations()
+    {
+        return $this->belongsToMany(Variation::class, 'cart_variation')
             ->withPivot('quantity')
             ->orderBy('id');
     }

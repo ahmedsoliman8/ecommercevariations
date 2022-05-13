@@ -154,4 +154,23 @@ class  Cart implements CartInterface
         $this->instance()->variations()->detach();
     }
 
+    public function hasPaymentIntent(): bool
+    {
+
+        return !is_null($this->getPaymentIntentId());
+
+    }
+
+    public function getPaymentIntentId()
+    {
+        return $this->instance()->payment_intent_id;
+    }
+
+    public function updatePaymentIntentId($paymentIntentId)
+    {
+        return $this->instance()->update([
+            'payment_intent_id' => $paymentIntentId
+        ]);
+    }
+
 }

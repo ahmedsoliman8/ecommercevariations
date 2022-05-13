@@ -78,6 +78,14 @@ class Checkout extends Component
 
     public function checkout(CartInterface $cart)
     {
+        //dd($this->getPaymentIntent($cart)->status );
+
+        if (!($this->getPaymentIntent($cart)->status === 'succeeded')){
+            $this->dispatchBrowserEvent('notification',[
+                'body'=>'Your payment failed.'
+            ]);
+            return;
+        }
         $this->validate();
         $this->shippingAddress = ShippingAddress::query();
         if (auth()->user()) {
@@ -140,12 +148,48 @@ class Checkout extends Component
         return $cart->subtotal() + $this->shippingType->price;
     }
 
+    public function getPaymentIntent(CartInterface $cart)
+    {
+        if ($cart->hasPaymentIntent()) {
+
+            $paymentIntent = app('stripe')->paymentIntents->retrieve($cart->getPaymentIntentId());
+            if ($paymentIntent->status !== 'succeeded') {
+
+                $paymentIntent = app('stripe')->paymentIntents->update($cart->getPaymentIntentId(), [
+                    'amount' => (int)$this->total,
+                ]);
+            }
+
+            return $paymentIntent;
+
+        }
+        $paymentIntent = app('stripe')->paymentIntents->create([
+            'amount' => (int)$this->total,
+            'currency' => 'usd',
+            'setup_future_usage' => 'on_session',
+
+        ]);
+        $cart->updatePaymentIntentId($paymentIntent->id);
+        return $paymentIntent;
+
+    }
+
+    public  function callValidate(){
+        $this->validate();
+    }
+
+    public  function getErrorCount(){
+        return $this->getErrorBag()->count();
+    }
+
     public function render(CartInterface $cart)
     {
+
         return view('livewire.checkout',
             [
                 'cart' => $cart,
-                'shippingTypes' => $this->shippingTypes
+                //'shippingTypes' => $this->shippingTypes,
+                'paymentIntent' => $this->getPaymentIntent($cart)
             ]);
     }
 }

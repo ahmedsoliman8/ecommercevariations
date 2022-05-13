@@ -1,4 +1,44 @@
-<form wire:submit.prevent="checkout">
+<form
+    x-on:submit.prevent="submit"
+    x-data="{
+    stripe:null,
+    cardElement:null,
+    email:@entangle('accountForm.email').defer,
+   async submit(){
+    await $wire.callValidate()
+    let errorCount=await $wire.getErrorCount()
+    if(errorCount>=1){
+    return
+    }
+      const {paymentIntent,error}= await this.stripe.confirmCardPayment(
+            '{{$paymentIntent->client_secret}}',{
+                payment_method:{
+                  card:this.cardElement,
+                  billing_details:{email:this.email}
+                }
+            }
+        )
+
+        if(error){
+         window.dispatchEvent(new CustomEvent('notification',{
+             detail:{
+             body:error.message,
+             timeout:10000
+             }
+           }))
+        }else{
+        $wire.checkout()
+        }
+
+    },
+    init(){
+    this.stripe=Stripe('{{config('stripe.key')}}')
+    const elements=this.stripe.elements()
+    this.cardElement=elements.create('card'),
+    this.cardElement.mount('#card-element')
+    }
+    }"
+>
     <div class="overflow-hidden sm:rounded-lg grid grid-cols-6 grid-flow-col gap-4">
         <div class="p-6 bg-white border-b border-gray-200 col-span-3 self-start space-y-6">
             @guest
@@ -88,7 +128,9 @@
                 <div class="font-semibold text-lg">Payment</div>
 
                 <div>
-                    Stripe card form
+
+                    <div wire:ignore id="card-element"></div>
+
                 </div>
             </div>
         </div>
